@@ -1,0 +1,47 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.pickle
+
+# Virtual env
+venv/
+.env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# =========================
+# Data folders
+# =========================
+data/raw/
+data/interim/
+
+# Allow processed but ignore large files
+data/processed/*.csv
+
+# Don't ignore models or processed small files
+# Uncomment if models are big
+# models/
+
+# =========================
+# OS / temp files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
