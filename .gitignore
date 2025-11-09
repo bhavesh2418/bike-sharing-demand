@@ -45,3 +45,11 @@ logs/
 # =========================
 .vscode/
 .idea/
+/data/raw/
+/data/processed/
+.venv/
+__pycache__/
+*.pkl
+*.json
+*.log
+
