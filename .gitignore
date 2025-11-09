@@ -1,0 +1,13 @@
+# ignore raw data
+data/raw/*
+data/processed/*
+
+# ignore models
+models/*
+
+# python cache
+__pycache__/
+*.pyc
+
+# notebook checkpoints
+.ipynb_checkpoints/
