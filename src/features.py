@@ -1,58 +1,73 @@
-"""
-Feature Engineering for Bike Sharing Demand
--------------------------------------------
-Transform raw / processed data into ML-ready features.
-"""
+# src/features.py
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from xgboost import XGBRegressor
+from sklearn.metrics import mean_squared_log_error
+
+FEATURES = [
+    'season', 'holiday', 'workingday', 'weather',
+    'temp', 'atemp', 'humidity', 'windspeed',
+    'hour', 'day', 'month', 'year', 'dayofweek'
+]
+
+TARGET = 'count'
+
+def chronological_split(df, features=FEATURES, target=TARGET, split_ratio=0.8):
+    """
+    Split train → train/validation chronologically
+    """
+    X = df[features]
+    y = df[target].clip(lower=0)  # Clip negative values to 0
+
+    split_index = int(len(df) * split_ratio)
+
+    X_train = X.iloc[:split_index]
+    X_valid = X.iloc[split_index:]
+
+    y_train = y.iloc[:split_index]
+    y_valid = y.iloc[split_index:]
+
+    return X_train, X_valid, y_train, y_valid
 
 
-def add_datetime_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Extract datetime features from 'datetime' column."""
-    df["datetime"] = pd.to_datetime(df["datetime"])
-    df["hour"] = df["datetime"].dt.hour
-    df["day"] = df["datetime"].dt.day
-    df["weekday"] = df["datetime"].dt.weekday
-    df["month"] = df["datetime"].dt.month
-    df["year"] = df["datetime"].dt.year
-    return df
+def evaluate_model(model, X_valid, y_valid):
+    preds = model.predict(X_valid)
+    preds = np.clip(preds, 0, None)  # Clip predictions to 0 for RMSLE
+    rmsle = np.sqrt(mean_squared_log_error(y_valid, preds))
+    return rmsle
 
 
-def add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add high-level seasonal categories."""
-    df["is_weekend"] = df["weekday"].isin([5, 6]).astype(int)
-    df["is_workinghour"] = df["hour"].between(8, 18).astype(int)
-    return df
+def train_models(X_train, X_valid, y_train, y_valid):
+    models = {
+        "LinearRegression": LinearRegression(),
+        "RandomForest": RandomForestRegressor(n_estimators=100, random_state=42),
+        "GradientBoosting": GradientBoostingRegressor(n_estimators=100, random_state=42),
+        "XGBoost": XGBRegressor(n_estimators=100, random_state=42)
+    }
+
+    scores = {}
+
+    for name, model in models.items():
+        print(f">> Training {name}...")
+        model.fit(X_train, y_train)
+        rmsle = evaluate_model(model, X_valid, y_valid)
+        print(f"{name} RMSLE: {rmsle:.4f}")
+        scores[name] = rmsle
+
+    return scores
 
 
-def add_weather_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean weather & environmental variables."""
-    df["temp_feels_diff"] = df["atemp"] - df["temp"]
-    df["humidity_temp_ratio"] = df["humidity"] / (df["temp"] + 1)
-    return df
-
-
-def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Main function combining all feature transformations."""
-    df = add_datetime_features(df)
-    df = add_seasonal_features(df)
-    df = add_weather_features(df)
-
-    # Drop unused columns
-    drop_cols = ["datetime"]
-    df = df.drop(columns=[c for c in drop_cols if c in df.columns])
-    
-    return df
-
-
-# Example usage
 if __name__ == "__main__":
     print(">> Loading processed training data...")
-    df = pd.read_csv("data/processed/train_processed.csv")
+    train = pd.read_csv("data/processed/train_features.csv")
 
-    print(">> Applying feature engineering...")
-    df = build_features(df)
+    X_train, X_valid, y_train, y_valid = chronological_split(train)
 
-    df.to_csv("data/processed/train_features.csv", index=False)
-    print("✅ Features saved to: data/processed/train_features.csv")
+    print(">> Training models...")
+    scores = train_models(X_train, X_valid, y_train, y_valid)
+
+    print("✅ All models trained successfully")
